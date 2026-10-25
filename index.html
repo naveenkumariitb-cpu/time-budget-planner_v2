@@ -15,7 +15,9 @@
   :root { color-scheme: dark; }
   body { -webkit-tap-highlight-color: transparent; }
   .drag-handle { cursor: grab; touch-action: none; }
-  .clock-hand { transform-origin: 100px 100px; transition: transform .05s ease-out; }
+  .clock-hand { transition: transform .05s ease-out; pointer-events: none; }
+  .clock-tip { pointer-events: none; stroke: #0f172a; stroke-width: 2; }
+  #clockSvg { touch-action: none; user-select: none; }
   input, button { max-width: 100%; }
   .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
 </style>
@@ -79,16 +81,24 @@
 <div id="clockModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
  <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
   <div class="flex items-center justify-between"><h3 class="text-base font-bold">Set Duration</h3><button id="closeClockModalBtn" class="text-slate-400 p-1 text-lg">✕</button></div>
-  <div class="text-center py-1 bg-slate-900 rounded-lg border border-slate-700"><span id="modalDurationText" class="text-2xl font-mono font-bold text-indigo-400">0h 0m</span></div>
-  <div class="relative w-52 h-52 mx-auto touch-none select-none">
-   <svg id="clockSvg" class="w-full h-full cursor-pointer" viewBox="0 0 200 200">
-    <circle cx="100" cy="100" r="95" fill="#0f172a" stroke="#334155" stroke-width="4"/><g id="clockTicks" stroke="#64748b" stroke-width="2"></g>
-    <line id="hourHand" class="clock-hand" x1="100" y1="100" x2="100" y2="45" stroke="#6366f1" stroke-width="6" stroke-linecap="round"/>
-    <line id="minuteHand" class="clock-hand" x1="100" y1="100" x2="100" y2="25" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/><circle cx="100" cy="100" r="6" fill="#f8fafc"/>
+  <div class="text-center py-2 bg-slate-900 rounded-lg border border-slate-700"><span id="modalDurationText" class="text-2xl font-mono font-bold text-indigo-300">0h 0m</span></div>
+  <div class="grid grid-cols-2 gap-2" role="group" aria-label="Choose which part of duration to set">
+   <button id="setHoursModeBtn" type="button" aria-pressed="false" class="rounded-lg border border-slate-600 bg-slate-700 py-2.5 text-sm font-bold">🟣 Set hours</button>
+   <button id="setMinutesModeBtn" type="button" aria-pressed="true" class="rounded-lg border border-sky-400 bg-sky-950 py-2.5 text-sm font-bold text-sky-200">🔵 Set minutes</button>
+  </div>
+  <p id="clockInstruction" class="text-center text-xs leading-relaxed text-slate-300">Drag around the clock face to set the minutes. The blue hand shows minutes.</p>
+  <div class="relative w-60 h-60 max-w-full mx-auto touch-none select-none">
+   <svg id="clockSvg" class="w-full h-full cursor-crosshair" viewBox="0 0 200 200" role="img" aria-label="Duration dial. Drag around the face to set the selected unit.">
+    <circle cx="100" cy="100" r="95" fill="#0f172a" stroke="#475569" stroke-width="4"/><g id="clockTicks" stroke="#64748b" stroke-width="2"></g><g id="clockNumbers" fill="#e2e8f0" font-size="10" font-weight="700" text-anchor="middle" dominant-baseline="middle"></g>
+    <line id="hourHand" class="clock-hand" x1="100" y1="100" x2="100" y2="53" stroke="#a78bfa" stroke-width="7" stroke-linecap="round"/>
+    <line id="minuteHand" class="clock-hand" x1="100" y1="100" x2="100" y2="29" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+    <circle id="hourTip" class="clock-tip" cx="100" cy="53" r="5" fill="#a78bfa"/><circle id="minuteTip" class="clock-tip" cx="100" cy="29" r="4" fill="#38bdf8"/>
+    <circle cx="100" cy="100" r="6" fill="#f8fafc" stroke="#0f172a" stroke-width="2"/>
    </svg>
   </div>
+  <p class="text-center text-[11px] text-slate-400">Quick adjust: add time below, or tap Clear to reset.</p>
   <div class="grid grid-cols-5 gap-1.5 text-xs font-semibold">
-   <button data-add="5" class="bg-slate-700 py-2 rounded">+5m</button><button data-add="15" class="bg-slate-700 py-2 rounded">+15m</button><button data-add="30" class="bg-slate-700 py-2 rounded">+30m</button><button data-add="60" class="bg-slate-700 py-2 rounded">+1h</button><button id="clearDurationBtn" class="bg-rose-900/60 text-rose-200 py-2 rounded">0m</button>
+   <button data-add="5" class="bg-slate-700 hover:bg-slate-600 py-2.5 rounded">+5m</button><button data-add="15" class="bg-slate-700 hover:bg-slate-600 py-2.5 rounded">+15m</button><button data-add="30" class="bg-slate-700 hover:bg-slate-600 py-2.5 rounded">+30m</button><button data-add="60" class="bg-slate-700 hover:bg-slate-600 py-2.5 rounded">+1h</button><button id="clearDurationBtn" class="bg-rose-900/60 text-rose-200 py-2.5 rounded">Clear</button>
   </div>
   <button id="saveClockBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 font-bold py-2.5 rounded-xl">Apply Duration</button>
  </div>
@@ -115,7 +125,7 @@
    {id:'e1',label:'Evening Prep',time:'20:00',enabled:true}
   ]
  });
- let state = defaultState(), currentModalTaskId = null, tempModalMinutes = 0, isDraggingHand = false;
+ let state = defaultState(), currentModalTaskId = null, tempModalMinutes = 0, isDraggingHand = false, clockEditMode = 'minutes';
  const $ = id => document.getElementById(id);
  function formatDateTimeLocal(d) {
   const p=n=>String(n).padStart(2,'0');
@@ -216,29 +226,64 @@
  }
  function openClockModal(id) {
   currentModalTaskId=id; const t=state.tasks.find(x=>x.id===id); tempModalMinutes=t?t.duration:30;
-  updateClockHandsDisplay(); $('clockModal').classList.remove('hidden'); $('clockModal').classList.add('flex');
+  setClockEditMode('minutes'); updateClockHandsDisplay(); $('clockModal').classList.remove('hidden'); $('clockModal').classList.add('flex');
  }
- function closeClockModal() { $('clockModal').classList.add('hidden'); $('clockModal').classList.remove('flex'); }
+ function closeClockModal() { $('clockModal').classList.add('hidden'); $('clockModal').classList.remove('flex'); isDraggingHand=false; }
+ function setClockEditMode(mode) {
+  clockEditMode=mode;
+  const hours=mode==='hours';
+  $('setHoursModeBtn').setAttribute('aria-pressed',String(hours));
+  $('setMinutesModeBtn').setAttribute('aria-pressed',String(!hours));
+  $('setHoursModeBtn').className=hours?'rounded-lg border border-violet-400 bg-violet-950 py-2.5 text-sm font-bold text-violet-200':'rounded-lg border border-slate-600 bg-slate-700 py-2.5 text-sm font-bold';
+  $('setMinutesModeBtn').className=!hours?'rounded-lg border border-sky-400 bg-sky-950 py-2.5 text-sm font-bold text-sky-200':'rounded-lg border border-slate-600 bg-slate-700 py-2.5 text-sm font-bold';
+  $('clockInstruction').textContent=hours?'Drag around the clock face to set hours (1–12). Use +1h below for longer durations. The purple hand shows hours.':'Drag around the clock face to set minutes (0–59). The blue hand shows minutes.';
+  updateClockHandsDisplay();
+ }
  function updateClockHandsDisplay() {
+  tempModalMinutes=Math.max(0,Math.min(1440,Math.round(tempModalMinutes)));
   $('modalDurationText').textContent=formatDuration(tempModalMinutes);
-  const h=Math.floor(tempModalMinutes/60)%12, m=tempModalMinutes%60;
-  $('hourHand').setAttribute('transform',`rotate(${h*30+m*.5} 100 100)`);
-  $('minuteHand').setAttribute('transform',`rotate(${m*6} 100 100)`);
+  const totalHours=Math.floor(tempModalMinutes/60), h=totalHours%12, m=tempModalMinutes%60;
+  const hourAngle=(h*30+(m/60)*30), minuteAngle=m*6;
+  $('hourHand').setAttribute('transform',`rotate(${hourAngle} 100 100)`);
+  $('minuteHand').setAttribute('transform',`rotate(${minuteAngle} 100 100)`);
+  const point=(angle,r)=>({x:100+r*Math.sin(angle*Math.PI/180),y:100-r*Math.cos(angle*Math.PI/180)});
+  const hp=point(hourAngle,47), mp=point(minuteAngle,71);
+  $('hourTip').setAttribute('cx',hp.x);$('hourTip').setAttribute('cy',hp.y);
+  $('minuteTip').setAttribute('cx',mp.x);$('minuteTip').setAttribute('cy',mp.y);
+  $('hourHand').setAttribute('opacity',clockEditMode==='hours'?'1':'.78');
+  $('minuteHand').setAttribute('opacity',clockEditMode==='minutes'?'1':'.72');
+  $('hourTip').setAttribute('r',clockEditMode==='hours'?'6':'4');
+  $('minuteTip').setAttribute('r',clockEditMode==='minutes'?'5':'3');
  }
  function initClock() {
-  const g=$('clockTicks');
-  for(let i=0;i<12;i++){const a=i*Math.PI/6,x1=100+80*Math.sin(a),y1=100-80*Math.cos(a),x2=100+90*Math.sin(a),y2=100-90*Math.cos(a),line=document.createElementNS('http://www.w3.org/2000/svg','line');[['x1',x1],['y1',y1],['x2',x2],['y2',y2]].forEach(([k,v])=>line.setAttribute(k,v));g.appendChild(line);}
+  const g=$('clockTicks'), numbers=$('clockNumbers');
+  for(let i=0;i<12;i++){
+   const a=i*Math.PI/6,x1=100+80*Math.sin(a),y1=100-80*Math.cos(a),x2=100+90*Math.sin(a),y2=100-90*Math.cos(a),line=document.createElementNS('http://www.w3.org/2000/svg','line');
+   [['x1',x1],['y1',y1],['x2',x2],['y2',y2]].forEach(([k,v])=>line.setAttribute(k,v));g.appendChild(line);
+   const label=document.createElementNS('http://www.w3.org/2000/svg','text'), nr=68, nx=100+nr*Math.sin(a), ny=100-nr*Math.cos(a);
+   label.setAttribute('x',nx);label.setAttribute('y',ny);label.textContent=String(i===0?12:i);numbers.appendChild(label);
+  }
+  $('setHoursModeBtn').addEventListener('click',()=>setClockEditMode('hours'));
+  $('setMinutesModeBtn').addEventListener('click',()=>setClockEditMode('minutes'));
   $('clockSvg').addEventListener('pointerdown',e=>{isDraggingHand=true;$('clockSvg').setPointerCapture?.(e.pointerId);dragHand(e);});
   $('clockSvg').addEventListener('pointermove',e=>{if(isDraggingHand)dragHand(e);});
   $('clockSvg').addEventListener('pointerup',()=>isDraggingHand=false);
   $('clockSvg').addEventListener('pointercancel',()=>isDraggingHand=false);
  }
  function dragHand(e) {
-  const rect=$('clockSvg').getBoundingClientRect(), scaleX=200/rect.width, scaleY=200/rect.height;
-  const x=(e.clientX-rect.left)*scaleX-100,y=(e.clientY-rect.top)*scaleY-100;
-  let rad=Math.atan2(y,x)+Math.PI/2;if(rad<0)rad+=Math.PI*2;
-  const minutes=Math.round(rad/(Math.PI*2)*60)%60;
-  tempModalMinutes=Math.floor(tempModalMinutes/60)*60+minutes;updateClockHandsDisplay();
+  const rect=$('clockSvg').getBoundingClientRect();
+  if(!rect.width||!rect.height)return;
+  const x=(e.clientX-rect.left)*(200/rect.width)-100,y=(e.clientY-rect.top)*(200/rect.height)-100;
+  let angle=Math.atan2(x,-y); if(angle<0)angle+=Math.PI*2;
+  if(clockEditMode==='hours'){
+   let hours=Math.round(angle/(Math.PI*2)*12)%12; if(hours===0)hours=12;
+   const minutes=tempModalMinutes%60;
+   tempModalMinutes=Math.min(1440,hours*60+minutes);
+  } else {
+   const minutes=Math.round(angle/(Math.PI*2)*60)%60;
+   tempModalMinutes=Math.floor(tempModalMinutes/60)*60+minutes;
+  }
+  updateClockHandsDisplay();
  }
  function exportBackup() {
   const blob=new Blob([JSON.stringify({app:'Time Budget Planner',version:2,exportedAt:new Date().toISOString(),state},null,2)],{type:'application/json'});
@@ -258,6 +303,7 @@
   $('addTaskBtn').onclick=()=>{state.tasks.push({id:`task-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,title:'New Activity',duration:30,done:false});persist();render();};
   $('addAlarmBtn').onclick=()=>{state.alarms.push({id:`alarm-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,label:'Custom Review',time:'12:00',enabled:true});persist();renderAlarms();};
   $('closeClockModalBtn').onclick=closeClockModal;
+  $('clockModal').addEventListener('click',e=>{if(e.target===$('clockModal'))closeClockModal();});
   $('saveClockBtn').onclick=()=>{const t=state.tasks.find(x=>x.id===currentModalTaskId);if(t){t.duration=tempModalMinutes;persist();render();}closeClockModal();};
   document.querySelectorAll('[data-add]').forEach(b=>b.addEventListener('click',()=>{tempModalMinutes=Math.min(1440,tempModalMinutes+Number(b.dataset.add));updateClockHandsDisplay();}));
   $('clearDurationBtn').onclick=()=>{tempModalMinutes=0;updateClockHandsDisplay();};

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Time Budget Planner — Persistent Edition</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  body { -webkit-tap-highlight-color: transparent; }
+  .drag-handle { cursor: grab; touch-action: none; }
+  .clock-hand { transform-origin: 100px 100px; transition: transform .05s ease-out; }
+  input, button { max-width: 100%; }
+  .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+</style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans pb-12">
+<header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 shadow-md">
+ <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+  <div class="flex items-center gap-3">
+   <div class="p-2 bg-indigo-600 rounded-lg">◷</div>
+   <div><h1 class="font-bold text-lg text-white">Time Budget Planner</h1><p class="text-xs text-slate-400">Sequential Auto-Calculation & Schedule Review</p></div>
+  </div>
+  <div class="flex flex-wrap items-center gap-2">
+   <div class="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded-lg border border-slate-700">
+    <span class="text-xs text-slate-400 px-1">Start:</span>
+    <input type="datetime-local" id="baseStartTime" class="bg-slate-800 text-slate-100 text-sm rounded px-2 py-1 border border-slate-600">
+    <button id="syncNowBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1.5 rounded font-medium">⚡ Sync NOW</button>
+   </div>
+   <div class="bg-indigo-950/80 border border-indigo-700/50 rounded-lg px-3 py-2 text-xs">
+    <span class="text-indigo-300">Target Bedtime:</span> <strong id="targetBedtimeDisplay" class="text-white text-sm">--:--</strong>
+    <span id="sleepStatusBadge" class="ml-1 text-emerald-300">● Calculated</span>
+   </div>
+  </div>
+ </div>
+ <div class="max-w-6xl mx-auto px-4 pb-2 flex flex-wrap items-center justify-between gap-2">
+  <p id="saveStatus" role="status" class="text-xs text-emerald-300">Loading saved planner…</p>
+  <div class="flex flex-wrap gap-2">
+   <button id="saveNowBtn" class="text-xs bg-emerald-700 hover:bg-emerald-600 px-3 py-1.5 rounded">Save now</button>
+   <button id="exportBtn" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded">Export backup</button>
+   <label class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded cursor-pointer">Import backup<input id="importFile" type="file" accept=".json,application/json" class="hidden"></label>
+  </div>
+ </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-6 space-y-6">
+ <section class="bg-slate-800/90 rounded-xl p-4 border border-slate-700 shadow-sm space-y-3">
+  <div class="flex items-center justify-between border-b border-slate-700/60 pb-2 gap-2">
+   <div class="flex items-center gap-2"><span class="text-amber-400">🔔</span><h2 class="text-sm font-semibold text-slate-200">Daily Schedule Review Reminders</h2></div>
+   <button id="addAlarmBtn" class="text-xs bg-slate-700 hover:bg-slate-600 px-2.5 py-1 rounded border border-slate-600">+ Add Review Alarm</button>
+  </div>
+  <div id="alarmsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
+  <p class="text-xs text-slate-400">Reminder alerts only work while this page is open and the browser allows it.</p>
+ </section>
+ <section class="bg-slate-800 rounded-xl border border-slate-700 shadow-lg overflow-hidden">
+  <div class="p-4 border-b border-slate-700 flex items-center justify-between flex-wrap gap-2">
+   <div><h2 class="text-base font-bold text-white">Daily Activities Schedule</h2><span class="text-xs text-slate-400">Drag ⣿ to reorder activities</span></div>
+   <button id="addTaskBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-lg text-sm font-semibold">+ Add Activity</button>
+  </div>
+  <div class="overflow-x-auto">
+   <table class="w-full text-left border-collapse min-w-[760px]">
+    <thead><tr class="bg-slate-900/60 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-700">
+     <th class="py-3 px-2 text-center w-10">⣿</th><th class="py-3 px-3">Activity Description</th><th class="py-3 px-3 w-32 text-center">Duration</th><th class="py-3 px-3 w-28 text-center">Start Time</th><th class="py-3 px-3 w-28 text-center">End Time</th><th class="py-3 px-3 w-32 text-center">Status</th><th class="py-3 px-2 text-center w-16">Action</th>
+    </tr></thead><tbody id="taskTableBody" class="divide-y divide-slate-700/60 text-sm"></tbody>
+   </table>
+  </div>
+ </section>
+ <section class="rounded-xl border border-amber-700/50 bg-amber-950/30 p-4 text-sm text-amber-100">
+  <strong>Important about saving:</strong> This version autosaves to this browser's local storage and offers JSON backups. If you use it inside a Google Sites/Gemini preview that clears embedded storage, use <strong>Export backup</strong> before leaving and <strong>Import backup</strong> when needed. For dependable syncing across devices, the app needs cloud storage or a hosted backend.
+ </section>
+</main>
+
+<div id="clockModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+ <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
+  <div class="flex items-center justify-between"><h3 class="text-base font-bold">Set Duration</h3><button id="closeClockModalBtn" class="text-slate-400 p-1 text-lg">✕</button></div>
+  <div class="text-center py-1 bg-slate-900 rounded-lg border border-slate-700"><span id="modalDurationText" class="text-2xl font-mono font-bold text-indigo-400">0h 0m</span></div>
+  <div class="relative w-52 h-52 mx-auto touch-none select-none">
+   <svg id="clockSvg" class="w-full h-full cursor-pointer" viewBox="0 0 200 200">
+    <circle cx="100" cy="100" r="95" fill="#0f172a" stroke="#334155" stroke-width="4"/><g id="clockTicks" stroke="#64748b" stroke-width="2"></g>
+    <line id="hourHand" class="clock-hand" x1="100" y1="100" x2="100" y2="45" stroke="#6366f1" stroke-width="6" stroke-linecap="round"/>
+    <line id="minuteHand" class="clock-hand" x1="100" y1="100" x2="100" y2="25" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/><circle cx="100" cy="100" r="6" fill="#f8fafc"/>
+   </svg>
+  </div>
+  <div class="grid grid-cols-5 gap-1.5 text-xs font-semibold">
+   <button data-add="5" class="bg-slate-700 py-2 rounded">+5m</button><button data-add="15" class="bg-slate-700 py-2 rounded">+15m</button><button data-add="30" class="bg-slate-700 py-2 rounded">+30m</button><button data-add="60" class="bg-slate-700 py-2 rounded">+1h</button><button id="clearDurationBtn" class="bg-rose-900/60 text-rose-200 py-2 rounded">0m</button>
+  </div>
+  <button id="saveClockBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 font-bold py-2.5 rounded-xl">Apply Duration</button>
+ </div>
+</div>
+
+<script>
+(() => {
+ 'use strict';
+ const STORAGE_KEY = 'time_budget_app_state_v2';
+ const LEGACY_KEY = 'time_budget_app_state';
+ const defaultState = () => ({
+  baseStartTime: formatDateTimeLocal(new Date()),
+  tasks: [
+   {id:'1',title:'Meal & Refreshment',duration:30,done:false},
+   {id:'2',title:'Car & Scooty Cleaning',duration:15,done:false},
+   {id:'3',title:'Gym & Workout',duration:45,done:false},
+   {id:'4',title:'Office Work - Deep Focus',duration:120,done:false},
+   {id:'5',title:'Lunch & Rest',duration:40,done:false},
+   {id:'6',title:'Daughter Olympiad Practice',duration:90,done:false}
+  ],
+  alarms:[
+   {id:'m1',label:'Morning Check-in',time:'10:00',enabled:true},
+   {id:'a1',label:'Noon Review',time:'14:00',enabled:true},
+   {id:'e1',label:'Evening Prep',time:'20:00',enabled:true}
+  ]
+ });
+ let state = defaultState(), currentModalTaskId = null, tempModalMinutes = 0, isDraggingHand = false;
+ const $ = id => document.getElementById(id);
+ function formatDateTimeLocal(d) {
+  const p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+ }
+ function normalise(s) {
+  if (!s || typeof s !== 'object') throw new Error('Invalid backup data');
+  const d = defaultState();
+  return {
+   baseStartTime: typeof s.baseStartTime === 'string' && s.baseStartTime ? s.baseStartTime : d.baseStartTime,
+   tasks: Array.isArray(s.tasks) ? s.tasks.map((t,i)=>({
+    id:String(t.id ?? `task-${Date.now()}-${i}`), title:String(t.title ?? 'Activity'),
+    duration:Math.max(0,Math.min(1440,Number.isFinite(Number(t.duration))?Math.round(Number(t.duration)):30)), done:Boolean(t.done)
+   })) : d.tasks,
+   alarms: Array.isArray(s.alarms) ? s.alarms.map((a,i)=>({
+    id:String(a.id ?? `alarm-${Date.now()}-${i}`), label:String(a.label ?? 'Review'),
+    time:/^\d{2}:\d{2}$/.test(a.time) ? a.time : '12:00', enabled:Boolean(a.enabled)
+   })) : d.alarms
+  };
+ }
+ function setSaveStatus(message, ok=true) {
+  $('saveStatus').textContent = message;
+  $('saveStatus').className = 'text-xs ' + (ok ? 'text-emerald-300' : 'text-amber-300');
+ }
+ function persist() {
+  const serialized = JSON.stringify(state);
+  let saved = false, errors = [];
+  try { localStorage.setItem(STORAGE_KEY, serialized); saved = localStorage.getItem(STORAGE_KEY) === serialized; }
+  catch(e) { errors.push('browser storage unavailable'); }
+  // Keep a session copy as a fallback while this tab remains open.
+  try { sessionStorage.setItem(STORAGE_KEY, serialized); } catch(e) {}
+  setSaveStatus(saved ? '✓ Saved on this browser' : '⚠ Changes are only in this session — export a backup', saved);
+  return saved;
+ }
+ function loadSaved() {
+  let raw = null;
+  try { raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_KEY); } catch(e) {}
+  if (!raw) { try { raw = sessionStorage.getItem(STORAGE_KEY); } catch(e) {} }
+  if (raw) {
+   try { state = normalise(JSON.parse(raw)); setSaveStatus('✓ Previous planner data loaded'); return; }
+   catch(e) { setSaveStatus('⚠ Saved data could not be read; starting with defaults', false); }
+  } else {
+   state = defaultState();
+   setSaveStatus('New planner — changes will autosave when storage is available');
+  }
+ }
+ function escapeHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+ function formatDuration(mins) { return `${Math.floor(mins/60)}h ${mins%60}m`; }
+ function formatTimeOfDay(d) {
+  if (Number.isNaN(d.getTime())) return '--:--';
+  let h=d.getHours(); const m=String(d.getMinutes()).padStart(2,'0'), ap=h>=12?'PM':'AM'; h=h%12||12;
+  return `${h}:${m} ${ap}`;
+ }
+ function render() {
+  const tbody=$('taskTableBody'); tbody.innerHTML='';
+  let pointer=new Date(state.baseStartTime);
+  state.tasks.forEach(task=>{
+   const start=new Date(pointer), end=new Date(start.getTime()+(task.done?0:task.duration)*60000); pointer=end;
+   const tr=document.createElement('tr'); tr.dataset.id=task.id;
+   tr.className=`hover:bg-slate-700/30 transition ${task.done?'bg-slate-900/40 text-slate-500':'text-slate-200'}`;
+   tr.innerHTML=`
+    <td class="py-3 px-2 text-center drag-handle text-slate-500">⣿</td>
+    <td class="py-3 px-3"><input type="text" value="${escapeHtml(task.title)}" aria-label="Activity description" class="task-title bg-transparent w-full focus:bg-slate-900/80 rounded px-1.5 py-1 text-sm ${task.done?'line-through text-slate-500':'text-white'}"></td>
+    <td class="py-3 px-3 text-center"><button class="duration-btn inline-flex items-center gap-1 bg-slate-900 px-2.5 py-1 rounded border border-slate-700 text-xs font-mono text-indigo-300">🕒 ${formatDuration(task.duration)}</button></td>
+    <td class="py-3 px-3 text-center font-mono text-xs text-slate-300">${formatTimeOfDay(start)}</td>
+    <td class="py-3 px-3 text-center font-mono text-xs text-indigo-300 font-semibold">${formatTimeOfDay(end)}</td>
+    <td class="py-3 px-3 text-center"><button class="done-btn w-24 py-1 rounded text-xs font-bold ${task.done?'bg-emerald-600 text-white':'bg-slate-700 text-slate-300'}">${task.done?'✓ DONE':'Pending'}</button></td>
+    <td class="py-3 px-2 text-center"><button class="delete-btn text-rose-400 p-1 font-bold text-base" aria-label="Delete activity">✕</button></td>`;
+   tr.querySelector('.task-title').addEventListener('change',e=>{task.title=e.target.value;persist();});
+   tr.querySelector('.duration-btn').addEventListener('click',()=>openClockModal(task.id));
+   tr.querySelector('.done-btn').addEventListener('click',()=>{task.done=!task.done;persist();render();});
+   tr.querySelector('.delete-btn').addEventListener('click',()=>{if(confirm(`Delete "${task.title}"?`)){state.tasks=state.tasks.filter(t=>t.id!==task.id);persist();render();}});
+   tbody.appendChild(tr);
+  });
+  $('targetBedtimeDisplay').textContent=formatTimeOfDay(pointer);
+  renderAlarms();
+  $('baseStartTime').value=state.baseStartTime;
+  if (window.Sortable && !tbody.dataset.sortable) {
+   Sortable.create(tbody,{handle:'.drag-handle',animation:150,onEnd:()=>{
+    const order=[...tbody.querySelectorAll('tr')].map(tr=>state.tasks.find(t=>t.id===tr.dataset.id)).filter(Boolean);
+    if(order.length===state.tasks.length){state.tasks=order;persist();render();}
+   }});
+   tbody.dataset.sortable='1';
+  }
+ }
+ function renderAlarms() {
+  const container=$('alarmsContainer'); container.innerHTML='';
+  state.alarms.forEach(alarm=>{
+   const card=document.createElement('div');
+   card.className=`p-3 rounded-lg border flex items-center justify-between gap-2 ${alarm.enabled?'bg-slate-900/80 border-indigo-500/40':'bg-slate-900/30 border-slate-800 opacity-60'}`;
+   card.innerHTML=`<div class="space-y-1 min-w-0"><input aria-label="Reminder name" type="text" value="${escapeHtml(alarm.label)}" class="alarm-label bg-transparent text-xs font-semibold text-slate-300 w-full"><input aria-label="Reminder time" type="time" value="${alarm.time}" class="alarm-time bg-slate-800 text-slate-100 text-sm font-bold font-mono rounded px-1.5 py-0.5 border border-slate-700"></div><div class="flex items-center gap-2"><input aria-label="Enable reminder" type="checkbox" ${alarm.enabled?'checked':''} class="alarm-enabled w-4 h-4 accent-indigo-600"><button class="delete-alarm text-slate-500 hover:text-rose-400 text-xs" aria-label="Delete reminder">✕</button></div>`;
+   card.querySelector('.alarm-label').addEventListener('change',e=>{alarm.label=e.target.value;persist();});
+   card.querySelector('.alarm-time').addEventListener('change',e=>{alarm.time=e.target.value;persist();});
+   card.querySelector('.alarm-enabled').addEventListener('change',e=>{alarm.enabled=e.target.checked;persist();renderAlarms();});
+   card.querySelector('.delete-alarm').addEventListener('click',()=>{state.alarms=state.alarms.filter(a=>a.id!==alarm.id);persist();renderAlarms();});
+   container.appendChild(card);
+  });
+ }
+ function openClockModal(id) {
+  currentModalTaskId=id; const t=state.tasks.find(x=>x.id===id); tempModalMinutes=t?t.duration:30;
+  updateClockHandsDisplay(); $('clockModal').classList.remove('hidden'); $('clockModal').classList.add('flex');
+ }
+ function closeClockModal() { $('clockModal').classList.add('hidden'); $('clockModal').classList.remove('flex'); }
+ function updateClockHandsDisplay() {
+  $('modalDurationText').textContent=formatDuration(tempModalMinutes);
+  const h=Math.floor(tempModalMinutes/60)%12, m=tempModalMinutes%60;
+  $('hourHand').setAttribute('transform',`rotate(${h*30+m*.5} 100 100)`);
+  $('minuteHand').setAttribute('transform',`rotate(${m*6} 100 100)`);
+ }
+ function initClock() {
+  const g=$('clockTicks');
+  for(let i=0;i<12;i++){const a=i*Math.PI/6,x1=100+80*Math.sin(a),y1=100-80*Math.cos(a),x2=100+90*Math.sin(a),y2=100-90*Math.cos(a),line=document.createElementNS('http://www.w3.org/2000/svg','line');[['x1',x1],['y1',y1],['x2',x2],['y2',y2]].forEach(([k,v])=>line.setAttribute(k,v));g.appendChild(line);}
+  $('clockSvg').addEventListener('pointerdown',e=>{isDraggingHand=true;$('clockSvg').setPointerCapture?.(e.pointerId);dragHand(e);});
+  $('clockSvg').addEventListener('pointermove',e=>{if(isDraggingHand)dragHand(e);});
+  $('clockSvg').addEventListener('pointerup',()=>isDraggingHand=false);
+  $('clockSvg').addEventListener('pointercancel',()=>isDraggingHand=false);
+ }
+ function dragHand(e) {
+  const rect=$('clockSvg').getBoundingClientRect(), scaleX=200/rect.width, scaleY=200/rect.height;
+  const x=(e.clientX-rect.left)*scaleX-100,y=(e.clientY-rect.top)*scaleY-100;
+  let rad=Math.atan2(y,x)+Math.PI/2;if(rad<0)rad+=Math.PI*2;
+  const minutes=Math.round(rad/(Math.PI*2)*60)%60;
+  tempModalMinutes=Math.floor(tempModalMinutes/60)*60+minutes;updateClockHandsDisplay();
+ }
+ function exportBackup() {
+  const blob=new Blob([JSON.stringify({app:'Time Budget Planner',version:2,exportedAt:new Date().toISOString(),state},null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`time-budget-backup-${formatDateTimeLocal(new Date()).replace(/[:]/g,'-')}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  setSaveStatus('✓ Backup exported. Keep the JSON file somewhere safe');
+ }
+ function importBackup(file) {
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{try{const data=JSON.parse(reader.result);state=normalise(data.state||data);persist();render();alert('Backup imported successfully.');}
+   catch(e){alert('Could not import this file. Please choose a valid Time Budget Planner JSON backup.');}};
+  reader.readAsText(file);
+ }
+ function setup() {
+  $('syncNowBtn').onclick=()=>{state.baseStartTime=formatDateTimeLocal(new Date());persist();render();};
+  $('baseStartTime').addEventListener('change',e=>{if(e.target.value){state.baseStartTime=e.target.value;persist();render();}});
+  $('addTaskBtn').onclick=()=>{state.tasks.push({id:`task-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,title:'New Activity',duration:30,done:false});persist();render();};
+  $('addAlarmBtn').onclick=()=>{state.alarms.push({id:`alarm-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,label:'Custom Review',time:'12:00',enabled:true});persist();renderAlarms();};
+  $('closeClockModalBtn').onclick=closeClockModal;
+  $('saveClockBtn').onclick=()=>{const t=state.tasks.find(x=>x.id===currentModalTaskId);if(t){t.duration=tempModalMinutes;persist();render();}closeClockModal();};
+  document.querySelectorAll('[data-add]').forEach(b=>b.addEventListener('click',()=>{tempModalMinutes=Math.min(1440,tempModalMinutes+Number(b.dataset.add));updateClockHandsDisplay();}));
+  $('clearDurationBtn').onclick=()=>{tempModalMinutes=0;updateClockHandsDisplay();};
+  $('saveNowBtn').onclick=()=>{const ok=persist();alert(ok?'Planner saved in this browser.':'Browser storage is unavailable. Please export a backup and use a persistent hosted version for reliable saving.');};
+  $('exportBtn').onclick=exportBackup;
+  $('importFile').addEventListener('change',e=>{importBackup(e.target.files[0]);e.target.value='';});
+  window.addEventListener('pagehide',persist);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persist();});
+  window.addEventListener('beforeunload',persist);
+ }
+ function startAlarmChecker() {
+  const fired=new Set();
+  setInterval(()=>{
+   const now=new Date(),key=`${now.toDateString()}-${now.getHours()}:${now.getMinutes()}`;
+   if(now.getSeconds()!==0||fired.has(key))return;
+   const cur=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+   state.alarms.filter(a=>a.enabled&&a.time===cur).forEach(a=>{fired.add(key+a.id);alert(`🔔 Schedule Review Alarm: ${a.label}\nTime to review your schedule.`);});
+  },1000);
+ }
+ document.addEventListener('DOMContentLoaded',()=>{loadSaved();initClock();setup();render();startAlarmChecker();});
+})();
+</script>
+</body>
+</html>

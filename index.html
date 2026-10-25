@@ -3,7 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-<title>Time Budget Planner — Persistent Edition</title>
+<title>Time Budget Planner</title>
+<meta name="theme-color" content="#0f172a">
+<meta name="description" content="Plan daily activities, durations, and schedule reminders.">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <style>
@@ -274,6 +279,16 @@
  }
  document.addEventListener('DOMContentLoaded',()=>{loadSaved();initClock();setup();render();startAlarmChecker();});
 })();
+</script>
+<script>
+// Register the service worker so Chrome can offer an app-like installation.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js').catch(err => {
+      console.warn('Planner service worker registration failed:', err);
+    });
+  });
+}
 </script>
 </body>
 </html>

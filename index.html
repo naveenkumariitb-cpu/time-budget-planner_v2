@@ -57,7 +57,7 @@
   <div class="overflow-x-auto">
    <table class="w-full text-left border-collapse min-w-[760px]">
     <thead><tr class="bg-slate-900/60 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-700">
-     <th class="py-3 px-2 text-center w-10">⣿</th><th class="py-3 px-3">Activity Description</th><th class="py-3 px-3 w-32 text-center">Duration</th><th class="py-3 px-3 w-28 text-center">Start Time</th><th class="py-3 px-3 w-28 text-center">End Time</th><th class="py-3 px-3 w-32 text-center">Status</th><th class="py-3 px-2 text-center w-16">Action</th>
+     <th class="py-3 px-2 text-center w-10">⣿</th><th class="py-3 px-3">Activity Description</th><th class="py-3 px-3 w-32 text-center">Duration</th><th class="py-3 px-3 w-28 text-center">Start Time</th><th class="py-3 px-3 w-28 text-center">End Time</th><th class="py-3 px-3 w-32 text-center">Status</th><th class="py-3 px-2 text-center w-32">Action</th>
     </tr></thead><tbody id="taskTableBody" class="divide-y divide-slate-700/60 text-sm"></tbody>
    </table>
   </div>
@@ -107,7 +107,7 @@
   ],
   alarms:[{id:'m1',label:'Review',time:'10:00',enabled:true}]
  });
- let state = defaultState(), currentModalTaskId = null, tempModalMinutes = 0;
+ let state = defaultState(), currentModalTaskId = null, tempModalMinutes = 0, isDraggingHand = false, clockEditMode = 'minutes';
  const $ = id => document.getElementById(id);
  function formatDateTimeLocal(d) {
   const p=n=>String(n).padStart(2,'0');
@@ -159,6 +159,57 @@
   let h=d.getHours(); const m=String(d.getMinutes()).padStart(2,'0'), ap=h>=12?'PM':'AM'; h=h%12||12;
   return `${h}:${m} ${ap}`;
  }
+ function openClockModal(id) {
+  currentModalTaskId=id; const t=state.tasks.find(x=>x.id===id); tempModalMinutes=t?t.duration:30;
+  setClockEditMode('minutes'); updateClockHandsDisplay(); $('clockModal').classList.remove('hidden'); $('clockModal').classList.add('flex');
+ }
+ function closeClockModal() { $('clockModal').classList.add('hidden'); $('clockModal').classList.remove('flex'); isDraggingHand=false; }
+ function setClockEditMode(mode) {
+  clockEditMode=mode;
+  const hours=mode==='hours';
+  $('setHoursModeBtn').setAttribute('aria-pressed',String(hours));
+  $('setMinutesModeBtn').setAttribute('aria-pressed',String(!hours));
+  $('setHoursModeBtn').className=hours?'rounded-lg border border-violet-400 bg-violet-950 py-2.5 text-sm font-bold text-violet-200':'rounded-lg border border-slate-600 bg-slate-700 py-2.5 text-sm font-bold';
+  $('setMinutesModeBtn').className=!hours?'rounded-lg border border-sky-400 bg-sky-950 py-2.5 text-sm font-bold text-sky-200':'rounded-lg border border-slate-600 bg-slate-700 py-2.5 text-sm font-bold';
+  updateClockHandsDisplay();
+ }
+ function updateClockHandsDisplay() {
+  tempModalMinutes=Math.max(0,Math.min(1440,Math.round(tempModalMinutes)));
+  $('modalDurationText').textContent=formatDuration(tempModalMinutes);
+  const totalHours=Math.floor(tempModalMinutes/60), h=totalHours%12, m=tempModalMinutes%60;
+  $('hourHand').setAttribute('transform',`rotate(${h*30+(m/60)*30} 100 100)`);
+  $('minuteHand').setAttribute('transform',`rotate(${m*6} 100 100)`);
+ }
+ function initClock() {
+  const g=$('clockTicks'), numbers=$('clockNumbers');
+  g.innerHTML=''; numbers.innerHTML='';
+  for(let i=0;i<12;i++){
+   const a=i*Math.PI/6,x1=100+80*Math.sin(a),y1=100-80*Math.cos(a),x2=100+90*Math.sin(a),y2=100-90*Math.cos(a),line=document.createElementNS('http://www.w3.org/2000/svg','line');
+   [['x1',x1],['y1',y1],['x2',x2],['y2',y2]].forEach(([k,v])=>line.setAttribute(k,v));g.appendChild(line);
+   const label=document.createElementNS('http://www.w3.org/2000/svg','text'), nr=68, nx=100+nr*Math.sin(a), ny=100-nr*Math.cos(a);
+   label.setAttribute('x',nx);label.setAttribute('y',ny);label.textContent=String(i===0?12:i);numbers.appendChild(label);
+  }
+  $('setHoursModeBtn').addEventListener('click',()=>setClockEditMode('hours'));
+  $('setMinutesModeBtn').addEventListener('click',()=>setClockEditMode('minutes'));
+  $('clockSvg').addEventListener('pointerdown',e=>{isDraggingHand=true;$('clockSvg').setPointerCapture?.(e.pointerId);dragHand(e);});
+  $('clockSvg').addEventListener('pointermove',e=>{if(isDraggingHand)dragHand(e);});
+  $('clockSvg').addEventListener('pointerup',()=>isDraggingHand=false);
+  $('clockSvg').addEventListener('pointercancel',()=>isDraggingHand=false);
+ }
+ function dragHand(e) {
+  const rect=$('clockSvg').getBoundingClientRect();
+  if(!rect.width||!rect.height)return;
+  const x=(e.clientX-rect.left)*(200/rect.width)-100,y=(e.clientY-rect.top)*(200/rect.height)-100;
+  let angle=Math.atan2(x,-y); if(angle<0)angle+=Math.PI*2;
+  if(clockEditMode==='hours'){
+   let hours=Math.round(angle/(Math.PI*2)*12)%12; if(hours===0)hours=12;
+   tempModalMinutes=Math.min(1440,hours*60+(tempModalMinutes%60));
+  } else {
+   const minutes=Math.round(angle/(Math.PI*2)*60)%60;
+   tempModalMinutes=Math.floor(tempModalMinutes/60)*60+minutes;
+  }
+  updateClockHandsDisplay();
+ }
  function render() {
   const tbody=$('taskTableBody'); tbody.innerHTML='';
   let pointer=new Date(state.baseStartTime);
@@ -173,10 +224,18 @@
     <td class="py-3 px-3 text-center font-mono text-xs text-slate-300">${formatTimeOfDay(start)}</td>
     <td class="py-3 px-3 text-center font-mono text-xs text-indigo-300 font-semibold">${formatTimeOfDay(end)}</td>
     <td class="py-3 px-3 text-center"><button class="done-btn w-24 py-1 rounded text-xs font-bold ${task.done?'bg-emerald-600 text-white':'bg-slate-700 text-slate-300'}">${task.done?'✓ DONE':'Pending'}</button></td>
-    <td class="py-3 px-2 text-center"><button class="delete-btn text-rose-400 p-1 font-bold text-base">✕</button></td>`;
+    <td class="py-3 px-2 text-center"><div class="flex justify-center items-center gap-2"><button class="copy-btn text-sky-300 p-1 text-xs font-semibold" title="Duplicate activity">⧉ Copy</button><button class="delete-btn text-rose-400 p-1 font-bold text-base" title="Delete">✕</button></div></td>`;
    tr.querySelector('.task-title').addEventListener('change',e=>{task.title=e.target.value;persist();});
-   tr.querySelector('.duration-btn').addEventListener('click',()=>{currentModalTaskId=task.id;tempModalMinutes=task.duration;updateClock();$('clockModal').classList.remove('hidden');$('clockModal').classList.add('flex');});
+   tr.querySelector('.duration-btn').addEventListener('click',()=>openClockModal(task.id));
    tr.querySelector('.done-btn').addEventListener('click',()=>{task.done=!task.done;persist();render();});
+   tr.querySelector('.copy-btn').addEventListener('click',()=>{
+    const copy={id:`task-${Date.now()}-${Math.random().toString(36).slice(2,6)}`, title:task.title+' (Copy)', duration:task.duration, done:false};
+    const idx=state.tasks.findIndex(t=>t.id===task.id);
+    state.tasks.splice(idx+1,0,copy);
+    persist(); render();
+    const row=[...tbody.querySelectorAll('tr')].find(r=>r.dataset.id===copy.id);
+    if(row){const f=row.querySelector('.task-title');f.focus();f.select();}
+   });
    tr.querySelector('.delete-btn').addEventListener('click',()=>{if(confirm('Delete?')){state.tasks=state.tasks.filter(t=>t.id!==task.id);persist();render();}});
    tbody.appendChild(tr);
   });
@@ -190,22 +249,22 @@
    tbody.dataset.sortable='1';
   }
  }
- function updateClock() {
-  tempModalMinutes=Math.max(0,Math.min(1440,Math.round(tempModalMinutes)));
-  $('modalDurationText').textContent=formatDuration(tempModalMinutes);
-  const h=Math.floor(tempModalMinutes/60)%12, m=tempModalMinutes%60;
-  $('hourHand').setAttribute('transform',`rotate(${h*30+(m/60)*30} 100 100)`);
-  $('minuteHand').setAttribute('transform',`rotate(${m*6} 100 100)`);
- }
  $('syncNowBtn').onclick=()=>{state.baseStartTime=formatDateTimeLocal(new Date());persist();render();};
  $('baseStartTime').addEventListener('change',e=>{if(e.target.value){state.baseStartTime=e.target.value;persist();render();}});
- $('addTaskBtn').onclick=()=>{state.tasks.push({id:String(Date.now()),title:'New Activity',duration:30,done:false});persist();render();};
- $('closeClockModalBtn').onclick=()=>$('clockModal').classList.add('hidden');
+ $('addTaskBtn').onclick=()=>{
+  state.tasks.push({id:`task-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,title:'New Activity',duration:30,done:false});
+  persist(); render();
+  const rows=[...$('taskTableBody').querySelectorAll('tr')];
+  const f=rows[rows.length-1]?.querySelector('.task-title');
+  if(f){f.focus();f.select();}
+ };
+ $('closeClockModalBtn').onclick=closeClockModal;
+ $('clockModal').addEventListener('click',e=>{if(e.target===$('clockModal'))closeClockModal();});
  $('saveClockBtn').onclick=()=>{const t=state.tasks.find(x=>x.id===currentModalTaskId);if(t){t.duration=tempModalMinutes;persist();render();}$('clockModal').classList.add('hidden');};
- document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{tempModalMinutes=Math.min(1440,tempModalMinutes+Number(b.dataset.add));updateClock();});
- $('clearDurationBtn').onclick=()=>{tempModalMinutes=0;updateClock();};
+ document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{tempModalMinutes=Math.min(1440,tempModalMinutes+Number(b.dataset.add));updateClockHandsDisplay();});
+ $('clearDurationBtn').onclick=()=>{tempModalMinutes=0;updateClockHandsDisplay();};
  $('saveNowBtn').onclick=persist;
- document.addEventListener('DOMContentLoaded',()=>{loadSaved();render();});
+ document.addEventListener('DOMContentLoaded',()=>{loadSaved();initClock();render();});
 })();
 </script>
 </body>

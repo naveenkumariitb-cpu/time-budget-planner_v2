@@ -27,7 +27,7 @@
  <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
   <div class="flex items-center gap-3">
    <div class="p-2 bg-indigo-600 rounded-lg">◷</div>
-   <div><h1 class="font-bold text-lg text-white">Time Budget Planner</h1><p class="text-xs text-slate-400">Sequential Auto-Calculation & Schedule Review</p></div>
+   <div><h1 class="font-bold text-lg text-white">Time Budget Planner</h1><p class="text-xs text-slate-400">Sequential Auto-Calculation & Cloud Sync</p></div>
   </div>
   <div class="flex flex-wrap items-center gap-2">
    <div class="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded-lg border border-slate-700">
@@ -37,29 +37,18 @@
    </div>
    <div class="bg-indigo-950/80 border border-indigo-700/50 rounded-lg px-3 py-2 text-xs">
     <span class="text-indigo-300">Target Bedtime:</span> <strong id="targetBedtimeDisplay" class="text-white text-sm">--:--</strong>
-    <span id="sleepStatusBadge" class="ml-1 text-emerald-300">● Calculated</span>
    </div>
   </div>
  </div>
  <div class="max-w-6xl mx-auto px-4 pb-2 flex flex-wrap items-center justify-between gap-2">
   <p id="saveStatus" role="status" class="text-xs text-emerald-300">Loading saved planner…</p>
   <div class="flex flex-wrap gap-2">
-   <button id="saveNowBtn" class="text-xs bg-emerald-700 hover:bg-emerald-600 px-3 py-1.5 rounded">Save now</button>
-   <button id="exportBtn" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded">Export backup</button>
-   <label class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded cursor-pointer">Import backup<input id="importFile" type="file" accept=".json,application/json" class="hidden"></label>
+   <button id="saveNowBtn" class="text-xs bg-emerald-700 hover:bg-emerald-600 px-3 py-1.5 rounded">Save & Cloud Sync</button>
   </div>
  </div>
 </header>
 
 <main class="max-w-6xl mx-auto px-4 py-6 space-y-6">
- <section class="bg-slate-800/90 rounded-xl p-4 border border-slate-700 shadow-sm space-y-3">
-  <div class="flex items-center justify-between border-b border-slate-700/60 pb-2 gap-2">
-   <div class="flex items-center gap-2"><span class="text-amber-400">🔔</span><h2 class="text-sm font-semibold text-slate-200">Daily Schedule Review Reminders</h2></div>
-   <button id="addAlarmBtn" class="text-xs bg-slate-700 hover:bg-slate-600 px-2.5 py-1 rounded border border-slate-600">+ Add Review Alarm</button>
-  </div>
-  <div id="alarmsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
-  <p class="text-xs text-slate-400">Reminder alerts only work while this page is open and the browser allows it.</p>
- </section>
  <section class="bg-slate-800 rounded-xl border border-slate-700 shadow-lg overflow-hidden">
   <div class="p-4 border-b border-slate-700 flex items-center justify-between flex-wrap gap-2">
    <div><h2 class="text-base font-bold text-white">Daily Activities Schedule</h2><span class="text-xs text-slate-400">Drag ⣿ to reorder activities</span></div>
@@ -73,22 +62,18 @@
    </table>
   </div>
  </section>
- <section class="rounded-xl border border-amber-700/50 bg-amber-950/30 p-4 text-sm text-amber-100">
-  <strong>Important about saving:</strong> This version autosaves to this browser's local storage and offers JSON backups. Storage is automatically shared with your desktop app under the same domain.
- </section>
 </main>
 
 <div id="clockModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
  <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
   <div class="flex items-center justify-between"><h3 class="text-base font-bold">Set Duration</h3><button id="closeClockModalBtn" class="text-slate-400 p-1 text-lg">✕</button></div>
   <div class="text-center py-2 bg-slate-900 rounded-lg border border-slate-700"><span id="modalDurationText" class="text-2xl font-mono font-bold text-indigo-300">0h 0m</span></div>
-  <div class="grid grid-cols-2 gap-2" role="group" aria-label="Choose which part of duration to set">
+  <div class="grid grid-cols-2 gap-2">
    <button id="setHoursModeBtn" type="button" aria-pressed="false" class="rounded-lg border border-slate-600 bg-slate-700 py-2.5 text-sm font-bold">🟣 Set hours</button>
    <button id="setMinutesModeBtn" type="button" aria-pressed="true" class="rounded-lg border border-sky-400 bg-sky-950 py-2.5 text-sm font-bold text-sky-200">🔵 Set minutes</button>
   </div>
-  <p id="clockInstruction" class="text-center text-xs leading-relaxed text-slate-300">Drag around the clock face to set the minutes. The blue hand shows minutes.</p>
   <div class="relative w-60 h-60 max-w-full mx-auto touch-none select-none">
-   <svg id="clockSvg" class="w-full h-full cursor-crosshair" viewBox="0 0 200 200" role="img" aria-label="Duration dial">
+   <svg id="clockSvg" class="w-full h-full cursor-crosshair" viewBox="0 0 200 200">
     <circle cx="100" cy="100" r="95" fill="#0f172a" stroke="#475569" stroke-width="4"/><g id="clockTicks" stroke="#64748b" stroke-width="2"></g><g id="clockNumbers" fill="#e2e8f0" font-size="10" font-weight="700" text-anchor="middle" dominant-baseline="middle"></g>
     <line id="hourHand" class="clock-hand" x1="100" y1="100" x2="100" y2="53" stroke="#a78bfa" stroke-width="7" stroke-linecap="round"/>
     <line id="minuteHand" class="clock-hand" x1="100" y1="100" x2="100" y2="29" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
@@ -96,9 +81,8 @@
     <circle cx="100" cy="100" r="6" fill="#f8fafc" stroke="#0f172a" stroke-width="2"/>
    </svg>
   </div>
-  <p class="text-center text-[11px] text-slate-400">Quick adjust: add time below, or tap Clear to reset.</p>
   <div class="grid grid-cols-5 gap-1.5 text-xs font-semibold">
-   <button data-add="5" class="bg-slate-700 hover:bg-slate-600 py-2.5 rounded">+5m</button><button data-add="15" class="bg-slate-700 hover:bg-slate-600 py-2.5 rounded">+15m</button><button data-add="30" class="bg-slate-700 hover:bg-slate-600 py-2.5 rounded">+30m</button><button data-add="60" class="bg-slate-700 hover:bg-slate-600 py-2.5 rounded">+1h</button><button id="clearDurationBtn" class="bg-rose-900/60 text-rose-200 py-2.5 rounded">Clear</button>
+   <button data-add="5" class="bg-slate-700 py-2.5 rounded">+5m</button><button data-add="15" class="bg-slate-700 py-2.5 rounded">+15m</button><button data-add="30" class="bg-slate-700 py-2.5 rounded">+30m</button><button data-add="60" class="bg-slate-700 py-2.5 rounded">+1h</button><button id="clearDurationBtn" class="bg-rose-900/60 text-rose-200 py-2.5 rounded">Clear</button>
   </div>
   <button id="saveClockBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 font-bold py-2.5 rounded-xl">Apply Duration</button>
  </div>
@@ -108,7 +92,9 @@
 (() => {
  'use strict';
  const STORAGE_KEY = 'time_budget_app_state_v2';
- const LEGACY_KEY = 'time_budget_app_state';
+ const JSONBIN_ID = '6ae36c83ac6210605a5c67d5';
+ const JSONBIN_API_KEY = '$2a$10$Gjejlu7w2hofqswbK/6kNuaRXSF7lWb3o6lhBu1zl1PFrJZRgaC9e';
+
  const defaultState = () => ({
   baseStartTime: formatDateTimeLocal(new Date()),
   tasks: [
@@ -119,62 +105,57 @@
    {id:'5',title:'Lunch & Rest',duration:40,done:false},
    {id:'6',title:'Daughter Olympiad Practice',duration:90,done:false}
   ],
-  alarms:[
-   {id:'m1',label:'Morning Check-in',time:'10:00',enabled:true},
-   {id:'a1',label:'Noon Review',time:'14:00',enabled:true},
-   {id:'e1',label:'Evening Prep',time:'20:00',enabled:true}
-  ]
+  alarms:[{id:'m1',label:'Review',time:'10:00',enabled:true}]
  });
- let state = defaultState(), currentModalTaskId = null, tempModalMinutes = 0, isDraggingHand = false, clockEditMode = 'minutes';
+ let state = defaultState(), currentModalTaskId = null, tempModalMinutes = 0;
  const $ = id => document.getElementById(id);
  function formatDateTimeLocal(d) {
   const p=n=>String(n).padStart(2,'0');
   return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
  }
  function normalise(s) {
-  if (!s || typeof s !== 'object') throw new Error('Invalid backup data');
+  if (!s || typeof s !== 'object') throw new Error('Invalid data');
   const d = defaultState();
   return {
    baseStartTime: typeof s.baseStartTime === 'string' && s.baseStartTime ? s.baseStartTime : d.baseStartTime,
    tasks: Array.isArray(s.tasks) ? s.tasks.map((t,i)=>({
-    id:String(t.id ?? `task-${Date.now()}-${i}`), title:String(t.title ?? 'Activity'),
-    duration:Math.max(0,Math.min(1440,Number.isFinite(Number(t.duration))?Math.round(Number(t.duration)):30)), done:Boolean(t.done)
+    id:String(t.id ?? `task-${i}`), title:String(t.title ?? 'Activity'),
+    duration:Math.max(0,Math.min(1440,Number(t.duration)||30)), done:Boolean(t.done)
    })) : d.tasks,
-   alarms: Array.isArray(s.alarms) ? s.alarms.map((a,i)=>({
-    id:String(a.id ?? `alarm-${Date.now()}-${i}`), label:String(a.label ?? 'Review'),
-    time:/^\d{2}:\d{2}$/.test(a.time) ? a.time : '12:00', enabled:Boolean(a.enabled)
-   })) : d.alarms
+   alarms: d.alarms
   };
  }
- function setSaveStatus(message, ok=true) {
-  $('saveStatus').textContent = message;
+ function setSaveStatus(msg, ok=true) {
+  $('saveStatus').textContent = msg;
   $('saveStatus').className = 'text-xs ' + (ok ? 'text-emerald-300' : 'text-amber-300');
  }
+ async function syncToCloud() {
+  const officeTask = state.tasks.find(t => t.title && t.title.toLowerCase().includes('officework'));
+  const duration = officeTask ? officeTask.duration : 120;
+  try {
+   const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_ID}`, {
+    method: 'PUT',
+    headers: {
+     'Content-Type': 'application/json',
+     'X-Master-Key': JSONBIN_API_KEY
+    },
+    body: JSON.stringify({ officeworkDuration: duration })
+   });
+   if (res.ok) setSaveStatus('✓ Saved & Cloud Synced!');
+   else setSaveStatus('⚠ Saved locally, cloud sync failed', false);
+  } catch(e) { setSaveStatus('✓ Saved locally (Offline)'); }
+ }
  function persist() {
-  const serialized = JSON.stringify(state);
-  let saved = false;
-  try { localStorage.setItem(STORAGE_KEY, serialized); saved = localStorage.getItem(STORAGE_KEY) === serialized; }
-  catch(e) {}
-  try { sessionStorage.setItem(STORAGE_KEY, serialized); } catch(e) {}
-  setSaveStatus(saved ? '✓ Saved & synced to domain' : '⚠ Session only — export a backup', saved);
-  return saved;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  syncToCloud();
  }
  function loadSaved() {
-  let raw = null;
-  try { raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_KEY); } catch(e) {}
-  if (!raw) { try { raw = sessionStorage.getItem(STORAGE_KEY); } catch(e) {} }
-  if (raw) {
-   try { state = normalise(JSON.parse(raw)); setSaveStatus('✓ Previous planner data loaded'); return; }
-   catch(e) { setSaveStatus('⚠ Saved data could not be read; starting with defaults', false); }
-  } else {
-   state = defaultState();
-   setSaveStatus('New planner — changes autosave when storage is available');
-  }
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) { try { state = normalise(JSON.parse(raw)); } catch(e) {} }
  }
- function escapeHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
  function formatDuration(mins) { return `${Math.floor(mins/60)}h ${mins%60}m`; }
  function formatTimeOfDay(d) {
-  if (Number.isNaN(d.getTime())) return '--:--';
+  if (isNaN(d.getTime())) return '--:--';
   let h=d.getHours(); const m=String(d.getMinutes()).padStart(2,'0'), ap=h>=12?'PM':'AM'; h=h%12||12;
   return `${h}:${m} ${ap}`;
  }
@@ -187,152 +168,38 @@
    tr.className=`hover:bg-slate-700/30 transition ${task.done?'bg-slate-900/40 text-slate-500':'text-slate-200'}`;
    tr.innerHTML=`
     <td class="py-3 px-2 text-center drag-handle text-slate-500">⣿</td>
-    <td class="py-3 px-3"><input type="text" value="${escapeHtml(task.title)}" aria-label="Activity description" class="task-title bg-transparent w-full focus:bg-slate-900/80 rounded px-1.5 py-1 text-sm ${task.done?'line-through text-slate-500':'text-white'}"></td>
-    <td class="py-3 px-3 text-center"><button class="duration-btn inline-flex items-center gap-1 bg-slate-900 px-2.5 py-1 rounded border border-slate-700 text-xs font-mono text-indigo-300">🕒 ${formatDuration(task.duration)}</button></td>
+    <td class="py-3 px-3"><input type="text" value="${task.title.replace(/"/g,'&quot;')}" class="task-title bg-transparent w-full rounded px-1.5 py-1 text-sm ${task.done?'line-through text-slate-500':'text-white'}"></td>
+    <td class="py-3 px-3 text-center"><button class="duration-btn bg-slate-900 px-2.5 py-1 rounded border border-slate-700 text-xs font-mono text-indigo-300">🕒 ${formatDuration(task.duration)}</button></td>
     <td class="py-3 px-3 text-center font-mono text-xs text-slate-300">${formatTimeOfDay(start)}</td>
     <td class="py-3 px-3 text-center font-mono text-xs text-indigo-300 font-semibold">${formatTimeOfDay(end)}</td>
     <td class="py-3 px-3 text-center"><button class="done-btn w-24 py-1 rounded text-xs font-bold ${task.done?'bg-emerald-600 text-white':'bg-slate-700 text-slate-300'}">${task.done?'✓ DONE':'Pending'}</button></td>
-    <td class="py-3 px-2 text-center"><button class="delete-btn text-rose-400 p-1 font-bold text-base" aria-label="Delete activity">✕</button></td>`;
+    <td class="py-3 px-2 text-center"><button class="delete-btn text-rose-400 p-1 font-bold text-base">✕</button></td>`;
    tr.querySelector('.task-title').addEventListener('change',e=>{task.title=e.target.value;persist();});
-   tr.querySelector('.duration-btn').addEventListener('click',()=>openClockModal(task.id));
+   tr.querySelector('.duration-btn').addEventListener('click',()=>{currentModalTaskId=task.id;tempModalMinutes=task.duration;updateClock();$('clockModal').classList.remove('hidden');$('clockModal').classList.add('flex');});
    tr.querySelector('.done-btn').addEventListener('click',()=>{task.done=!task.done;persist();render();});
-   tr.querySelector('.delete-btn').addEventListener('click',()=>{if(confirm(`Delete "${task.title}"?`)){state.tasks=state.tasks.filter(t=>t.id!==task.id);persist();render();}});
+   tr.querySelector('.delete-btn').addEventListener('click',()=>{if(confirm('Delete?')){state.tasks=state.tasks.filter(t=>t.id!==task.id);persist();render();}});
    tbody.appendChild(tr);
   });
   $('targetBedtimeDisplay').textContent=formatTimeOfDay(pointer);
-  renderAlarms();
   $('baseStartTime').value=state.baseStartTime;
-  if (window.Sortable && !tbody.dataset.sortable) {
-   Sortable.create(tbody,{handle:'.drag-handle',animation:150,onEnd:()=>{
-    const order=[...tbody.querySelectorAll('tr')].map(tr=>state.tasks.find(t=>t.id===tr.dataset.id)).filter(Boolean);
-    if(order.length===state.tasks.length){state.tasks=order;persist();render();}
-   }});
-   tbody.dataset.sortable='1';
-  }
  }
- function renderAlarms() {
-  const container=$('alarmsContainer'); container.innerHTML='';
-  state.alarms.forEach(alarm=>{
-   const card=document.createElement('div');
-   card.className=`p-3 rounded-lg border flex items-center justify-between gap-2 ${alarm.enabled?'bg-slate-900/80 border-indigo-500/40':'bg-slate-900/30 border-slate-800 opacity-60'}`;
-   card.innerHTML=`<div class="space-y-1 min-w-0"><input aria-label="Reminder name" type="text" value="${escapeHtml(alarm.label)}" class="alarm-label bg-transparent text-xs font-semibold text-slate-300 w-full"><input aria-label="Reminder time" type="time" value="${alarm.time}" class="alarm-time bg-slate-800 text-slate-100 text-sm font-bold font-mono rounded px-1.5 py-0.5 border border-slate-700"></div><div class="flex items-center gap-2"><input aria-label="Enable reminder" type="checkbox" ${alarm.enabled?'checked':''} class="alarm-enabled w-4 h-4 accent-indigo-600"><button class="delete-alarm text-slate-500 hover:text-rose-400 text-xs" aria-label="Delete reminder">✕</button></div>`;
-   card.querySelector('.alarm-label').addEventListener('change',e=>{alarm.label=e.target.value;persist();});
-   card.querySelector('.alarm-time').addEventListener('change',e=>{alarm.time=e.target.value;persist();});
-   card.querySelector('.alarm-enabled').addEventListener('change',e=>{alarm.enabled=e.target.checked;persist();renderAlarms();});
-   card.querySelector('.delete-alarm').addEventListener('click',()=>{state.alarms=state.alarms.filter(a=>a.id!==alarm.id);persist();renderAlarms();});
-   container.appendChild(card);
-  });
- }
- function openClockModal(id) {
-  currentModalTaskId=id; const t=state.tasks.find(x=>x.id===id); tempModalMinutes=t?t.duration:30;
-  setClockEditMode('minutes'); updateClockHandsDisplay(); $('clockModal').classList.remove('hidden'); $('clockModal').classList.add('flex');
- }
- function closeClockModal() { $('clockModal').classList.add('hidden'); $('clockModal').classList.remove('flex'); isDraggingHand=false; }
- function setClockEditMode(mode) {
-  clockEditMode=mode;
-  const hours=mode==='hours';
-  $('setHoursModeBtn').setAttribute('aria-pressed',String(hours));
-  $('setMinutesModeBtn').setAttribute('aria-pressed',String(!hours));
-  $('setHoursModeBtn').className=hours?'rounded-lg border border-violet-400 bg-violet-950 py-2.5 text-sm font-bold text-violet-200':'rounded-lg border border-slate-600 bg-slate-700 py-2.5 text-sm font-bold';
-  $('setMinutesModeBtn').className=!hours?'rounded-lg border border-sky-400 bg-sky-950 py-2.5 text-sm font-bold text-sky-200':'rounded-lg border border-slate-600 bg-slate-700 py-2.5 text-sm font-bold';
-  $('clockInstruction').textContent=hours?'Drag around the clock face to set hours (1–12). Use +1h below for longer durations. The purple hand shows hours.':'Drag around the clock face to set minutes (0–59). The blue hand shows minutes.';
-  updateClockHandsDisplay();
- }
- function updateClockHandsDisplay() {
+ function updateClock() {
   tempModalMinutes=Math.max(0,Math.min(1440,Math.round(tempModalMinutes)));
   $('modalDurationText').textContent=formatDuration(tempModalMinutes);
-  const totalHours=Math.floor(tempModalMinutes/60), h=totalHours%12, m=tempModalMinutes%60;
-  const hourAngle=(h*30+(m/60)*30), minuteAngle=m*6;
-  $('hourHand').setAttribute('transform',`rotate(${hourAngle} 100 100)`);
-  $('minuteHand').setAttribute('transform',`rotate(${minuteAngle} 100 100)`);
-  const point=(angle,r)=>({x:100+r*Math.sin(angle*Math.PI/180),y:100-r*Math.cos(angle*Math.PI/180)});
-  const hp=point(hourAngle,47), mp=point(minuteAngle,71);
-  $('hourTip').setAttribute('cx',hp.x);$('hourTip').setAttribute('cy',hp.y);
-  $('minuteTip').setAttribute('cx',mp.x);$('minuteTip').setAttribute('cy',mp.y);
-  $('hourHand').setAttribute('opacity',clockEditMode==='hours'?'1':'.78');
-  $('minuteHand').setAttribute('opacity',clockEditMode==='minutes'?'1':'.72');
-  $('hourTip').setAttribute('r',clockEditMode==='hours'?'6':'4');
-  $('minuteTip').setAttribute('r',clockEditMode==='minutes'?'5':'3');
+  const h=Math.floor(tempModalMinutes/60)%12, m=tempModalMinutes%60;
+  $('hourHand').setAttribute('transform',`rotate(${h*30+(m/60)*30} 100 100)`);
+  $('minuteHand').setAttribute('transform',`rotate(${m*6} 100 100)`);
  }
- function initClock() {
-  const g=$('clockTicks'), numbers=$('clockNumbers');
-  for(let i=0;i<12;i++){
-   const a=i*Math.PI/6,x1=100+80*Math.sin(a),y1=100-80*Math.cos(a),x2=100+90*Math.sin(a),y2=100-90*Math.cos(a),line=document.createElementNS('http://www.w3.org/2000/svg','line');
-   [['x1',x1],['y1',y1],['x2',x2],['y2',y2]].forEach(([k,v])=>line.setAttribute(k,v));g.appendChild(line);
-   const label=document.createElementNS('http://www.w3.org/2000/svg','text'), nr=68, nx=100+nr*Math.sin(a), ny=100-nr*Math.cos(a);
-   label.setAttribute('x',nx);label.setAttribute('y',ny);label.textContent=String(i===0?12:i);numbers.appendChild(label);
-  }
-  $('setHoursModeBtn').addEventListener('click',()=>setClockEditMode('hours'));
-  $('setMinutesModeBtn').addEventListener('click',()=>setClockEditMode('minutes'));
-  $('clockSvg').addEventListener('pointerdown',e=>{isDraggingHand=true;$('clockSvg').setPointerCapture?.(e.pointerId);dragHand(e);});
-  $('clockSvg').addEventListener('pointermove',e=>{if(isDraggingHand)dragHand(e);});
-  $('clockSvg').addEventListener('pointerup',()=>isDraggingHand=false);
-  $('clockSvg').addEventListener('pointercancel',()=>isDraggingHand=false);
- }
- function dragHand(e) {
-  const rect=$('clockSvg').getBoundingClientRect();
-  if(!rect.width||!rect.height)return;
-  const x=(e.clientX-rect.left)*(200/rect.width)-100,y=(e.clientY-rect.top)*(200/rect.height)-100;
-  let angle=Math.atan2(x,-y); if(angle<0)angle+=Math.PI*2;
-  if(clockEditMode==='hours'){
-   let hours=Math.round(angle/(Math.PI*2)*12)%12; if(hours===0)hours=12;
-   const minutes=tempModalMinutes%60;
-   tempModalMinutes=Math.min(1440,hours*60+minutes);
-  } else {
-   const minutes=Math.round(angle/(Math.PI*2)*60)%60;
-   tempModalMinutes=Math.floor(tempModalMinutes/60)*60+minutes;
-  }
-  updateClockHandsDisplay();
- }
- function exportBackup() {
-  const blob=new Blob([JSON.stringify({app:'Time Budget Planner',version:2,exportedAt:new Date().toISOString(),state},null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`time-budget-backup-${formatDateTimeLocal(new Date()).replace(/[:]/g,'-')}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
-  setSaveStatus('✓ Backup exported. Keep the JSON file somewhere safe');
- }
- function importBackup(file) {
-  if(!file)return;
-  const reader=new FileReader();
-  reader.onload=()=>{try{const data=JSON.parse(reader.result);state=normalise(data.state||data);persist();render();alert('Backup imported successfully.');}
-   catch(e){alert('Could not import this file. Please choose a valid Time Budget Planner JSON backup.');}};
-  reader.readAsText(file);
- }
- function setup() {
-  $('syncNowBtn').onclick=()=>{state.baseStartTime=formatDateTimeLocal(new Date());persist();render();};
-  $('baseStartTime').addEventListener('change',e=>{if(e.target.value){state.baseStartTime=e.target.value;persist();render();}});
-  $('addTaskBtn').onclick=()=>{state.tasks.push({id:`task-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,title:'New Activity',duration:30,done:false});persist();render();};
-  $('addAlarmBtn').onclick=()=>{state.alarms.push({id:`alarm-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,label:'Custom Review',time:'12:00',enabled:true});persist();renderAlarms();};
-  $('closeClockModalBtn').onclick=closeClockModal;
-  $('clockModal').addEventListener('click',e=>{if(e.target===$('clockModal'))closeClockModal();});
-  $('saveClockBtn').onclick=()=>{const t=state.tasks.find(x=>x.id===currentModalTaskId);if(t){t.duration=tempModalMinutes;persist();render();}closeClockModal();};
-  document.querySelectorAll('[data-add]').forEach(b=>b.addEventListener('click',()=>{tempModalMinutes=Math.min(1440,tempModalMinutes+Number(b.dataset.add));updateClockHandsDisplay();}));
-  $('clearDurationBtn').onclick=()=>{tempModalMinutes=0;updateClockHandsDisplay();};
-  $('saveNowBtn').onclick=()=>{const ok=persist();alert(ok?'Planner saved in this browser.':'Browser storage is unavailable.');};
-  $('exportBtn').onclick=exportBackup;
-  $('importFile').addEventListener('change',e=>{importBackup(e.target.files[0]);e.target.value='';});
-  window.addEventListener('pagehide',persist);
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persist();});
-  window.addEventListener('beforeunload',persist);
- }
- function startAlarmChecker() {
-  const fired=new Set();
-  setInterval(()=>{
-   const now=new Date(),key=`${now.toDateString()}-${now.getHours()}:${now.getMinutes()}`;
-   if(now.getSeconds()!==0||fired.has(key))return;
-   const cur=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-   state.alarms.filter(a=>a.enabled&&a.time===cur).forEach(a=>{fired.add(key+a.id);alert(`🔔 Schedule Review Alarm: ${a.label}\nTime to review your schedule.`);});
-  },1000);
- }
- document.addEventListener('DOMContentLoaded',()=>{loadSaved();initClock();setup();render();startAlarmChecker();});
+ $('syncNowBtn').onclick=()=>{state.baseStartTime=formatDateTimeLocal(new Date());persist();render();};
+ $('baseStartTime').addEventListener('change',e=>{if(e.target.value){state.baseStartTime=e.target.value;persist();render();}});
+ $('addTaskBtn').onclick=()=>{state.tasks.push({id:String(Date.now()),title:'New Activity',duration:30,done:false});persist();render();};
+ $('closeClockModalBtn').onclick=()=>$('clockModal').classList.add('hidden');
+ $('saveClockBtn').onclick=()=>{const t=state.tasks.find(x=>x.id===currentModalTaskId);if(t){t.duration=tempModalMinutes;persist();render();}$('clockModal').classList.add('hidden');};
+ document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{tempModalMinutes=Math.min(1440,tempModalMinutes+Number(b.dataset.add));updateClock();});
+ $('clearDurationBtn').onclick=()=>{tempModalMinutes=0;updateClock();};
+ $('saveNowBtn').onclick=persist;
+ document.addEventListener('DOMContentLoaded',()=>{loadSaved();render();});
 })();
-</script>
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./service-worker.js').catch(err => {
-      console.warn('Planner service worker registration failed:', err);
-    });
-  });
-}
 </script>
 </body>
 </html>

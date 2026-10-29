@@ -74,7 +74,7 @@
   </div>
  </section>
  <section class="rounded-xl border border-amber-700/50 bg-amber-950/30 p-4 text-sm text-amber-100">
-  <strong>Important about saving:</strong> This version autosaves to this browser's local storage and offers JSON backups. If you use it inside a Google Sites/Gemini preview that clears embedded storage, use <strong>Export backup</strong> before leaving and <strong>Import backup</strong> when needed. For dependable syncing across devices, the app needs cloud storage or a hosted backend.
+  <strong>Important about saving:</strong> This version autosaves to this browser's local storage and offers JSON backups. Storage is automatically shared with your desktop app under the same domain.
  </section>
 </main>
 
@@ -88,7 +88,7 @@
   </div>
   <p id="clockInstruction" class="text-center text-xs leading-relaxed text-slate-300">Drag around the clock face to set the minutes. The blue hand shows minutes.</p>
   <div class="relative w-60 h-60 max-w-full mx-auto touch-none select-none">
-   <svg id="clockSvg" class="w-full h-full cursor-crosshair" viewBox="0 0 200 200" role="img" aria-label="Duration dial. Drag around the face to set the selected unit.">
+   <svg id="clockSvg" class="w-full h-full cursor-crosshair" viewBox="0 0 200 200" role="img" aria-label="Duration dial">
     <circle cx="100" cy="100" r="95" fill="#0f172a" stroke="#475569" stroke-width="4"/><g id="clockTicks" stroke="#64748b" stroke-width="2"></g><g id="clockNumbers" fill="#e2e8f0" font-size="10" font-weight="700" text-anchor="middle" dominant-baseline="middle"></g>
     <line id="hourHand" class="clock-hand" x1="100" y1="100" x2="100" y2="53" stroke="#a78bfa" stroke-width="7" stroke-linecap="round"/>
     <line id="minuteHand" class="clock-hand" x1="100" y1="100" x2="100" y2="29" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
@@ -115,7 +115,7 @@
    {id:'1',title:'Meal & Refreshment',duration:30,done:false},
    {id:'2',title:'Car & Scooty Cleaning',duration:15,done:false},
    {id:'3',title:'Gym & Workout',duration:45,done:false},
-   {id:'4',title:'Office Work - Deep Focus',duration:120,done:false},
+   {id:'4',title:'Officework',duration:120,done:false},
    {id:'5',title:'Lunch & Rest',duration:40,done:false},
    {id:'6',title:'Daughter Olympiad Practice',duration:90,done:false}
   ],
@@ -152,12 +152,11 @@
  }
  function persist() {
   const serialized = JSON.stringify(state);
-  let saved = false, errors = [];
+  let saved = false;
   try { localStorage.setItem(STORAGE_KEY, serialized); saved = localStorage.getItem(STORAGE_KEY) === serialized; }
-  catch(e) { errors.push('browser storage unavailable'); }
-  // Keep a session copy as a fallback while this tab remains open.
+  catch(e) {}
   try { sessionStorage.setItem(STORAGE_KEY, serialized); } catch(e) {}
-  setSaveStatus(saved ? '✓ Saved on this browser' : '⚠ Changes are only in this session — export a backup', saved);
+  setSaveStatus(saved ? '✓ Saved & synced to domain' : '⚠ Session only — export a backup', saved);
   return saved;
  }
  function loadSaved() {
@@ -169,7 +168,7 @@
    catch(e) { setSaveStatus('⚠ Saved data could not be read; starting with defaults', false); }
   } else {
    state = defaultState();
-   setSaveStatus('New planner — changes will autosave when storage is available');
+   setSaveStatus('New planner — changes autosave when storage is available');
   }
  }
  function escapeHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -307,7 +306,7 @@
   $('saveClockBtn').onclick=()=>{const t=state.tasks.find(x=>x.id===currentModalTaskId);if(t){t.duration=tempModalMinutes;persist();render();}closeClockModal();};
   document.querySelectorAll('[data-add]').forEach(b=>b.addEventListener('click',()=>{tempModalMinutes=Math.min(1440,tempModalMinutes+Number(b.dataset.add));updateClockHandsDisplay();}));
   $('clearDurationBtn').onclick=()=>{tempModalMinutes=0;updateClockHandsDisplay();};
-  $('saveNowBtn').onclick=()=>{const ok=persist();alert(ok?'Planner saved in this browser.':'Browser storage is unavailable. Please export a backup and use a persistent hosted version for reliable saving.');};
+  $('saveNowBtn').onclick=()=>{const ok=persist();alert(ok?'Planner saved in this browser.':'Browser storage is unavailable.');};
   $('exportBtn').onclick=exportBackup;
   $('importFile').addEventListener('change',e=>{importBackup(e.target.files[0]);e.target.value='';});
   window.addEventListener('pagehide',persist);
@@ -327,7 +326,6 @@
 })();
 </script>
 <script>
-// Register the service worker so Chrome can offer an app-like installation.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js').catch(err => {

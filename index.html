@@ -182,6 +182,13 @@
   });
   $('targetBedtimeDisplay').textContent=formatTimeOfDay(pointer);
   $('baseStartTime').value=state.baseStartTime;
+  if (window.Sortable && !tbody.dataset.sortable) {
+   Sortable.create(tbody,{handle:'.drag-handle',animation:150,onEnd:()=>{
+    const order=[...tbody.querySelectorAll('tr')].map(tr=>state.tasks.find(t=>t.id===tr.dataset.id)).filter(Boolean);
+    if(order.length===state.tasks.length){state.tasks=order;persist();render();}
+   }});
+   tbody.dataset.sortable='1';
+  }
  }
  function updateClock() {
   tempModalMinutes=Math.max(0,Math.min(1440,Math.round(tempModalMinutes)));
